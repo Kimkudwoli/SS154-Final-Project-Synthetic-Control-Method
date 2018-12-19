@@ -1,0 +1,119 @@
+*ssc install synth
+
+*synthetic controls
+tsset countrycode year, year
+
+synth gdp gdp(2004) gdp(2006) gdp(2008) gdp(2011) educ2(2008) fdi2(2010) trade2 inflation(2007), trunit(20) trperiod(2013) mspeperiod(2005(1)2013) resultsperiod(2005(1)2017) keep(synth_decent.dta) replace fig;
+
+mat list e(V_matrix);
+
+*plot graph in predicted error
+use synth_decent.dta, clear
+keep _Y_treated _Y_synthetic _time
+drop if _time==.
+rename _time year
+rename _Y_treated  treat
+rename _Y_synthetic counterfact
+gen gapken=treat-counterfact
+sort year 
+twoway (line gapken year,lp(solid)lw(vthin)lcolor(black)), yline(0, lpattern(shortdash) lcolor(black)) xline(2013, lpattern(shortdash) lcolor(black)) xtitle("",si(medsmall)) xlabel(#10) ytitle("Gap in GDP prediction error", size(medsmall)) legend(off)
+save synth_decent_ken.dta, replace
+
+*Placebo test
+cd "C:\Users\Minerva\Downloads"
+use African_data.dta
+tsset countrycode year, year
+
+
+#delimit;
+set more off;
+local countrycode 1 2 3 4  6 7 8 9 10 11 13 15 16 17 18 20 21 22 23 24 25 26 27 28 29 30 31 32 33 34 35 36 37 38 39 40;
+
+
+foreach i of local countrycode {;
+	synth 	gdp gdp(2004) gdp(2006) gdp(2008) gdp(2011) educ2(2008) fdi2(2010) trade2 inflation(2007), trunit(`i') trperiod(2013) mspeperiod(2005(1)2013) resultsperiod(2005(1)2017) keep(synth_decent_`i'.dta) replace; matrix country`i' = e(RMSPE); /* check the V matrix*/
+		};
+
+
+ foreach i of local countrycode {;
+ matrix rownames country`i'=`i';
+ matlist country`i', names(rows);
+ };
+
+#delimit cr
+ 
+ 
+local countrycode  1 2 3 4  6 7 8 9 10 11 13 15 16 17 18 20 21 22 23 24 25 26 27 28 29 30 31 32 33 34 35 36 37 38 39 40
+
+
+ foreach i of local countrycode {
+ 	use synth_decent_`i' ,clear
+ 	keep _Y_treated _Y_synthetic _time
+ 	drop if _time==.
+	rename _time year
+ 	rename _Y_treated  treat`i'
+ 	rename _Y_synthetic counterfact`i'
+ 	gen gap`i'=treat`i'-counterfact`i'
+ 	sort year 
+ 	save synth_gap_decent`i'.dta, replace
+}
+
+use synth_gap_decent20.dta, clear
+sort year
+save placebo_decent20.dta, replace
+
+foreach i of local countrycode {
+		
+		merge year using synth_gap_decent`i'.dta
+		drop _merge
+		sort year
+		
+	save placebo_decent.dta, replace
+}
+
+*all placebos on the same picture
+use placebo_decent.dta, replace
+
+#delimit;
+
+twoway 
+(line gap1 year ,lp(solid)lw(vthin)) 
+(line gap2 year ,lp(solid)lw(vthin)) 
+(line gap4 year ,lp(solid)lw(vthin)) 
+(line gap6 year ,lp(solid)lw(vthin)) 
+(line gap8 year ,lp(solid)lw(vthin)) 
+(line gap9 year ,lp(solid)lw(vthin)) 
+(line gap10 year ,lp(solid)lw(vthin)) 
+(line gap11 year ,lp(solid)lw(vthin)) 
+(line gap13 year ,lp(solid)lw(vthin)) 
+(line gap15 year ,lp(solid)lw(vthin)) 
+(line gap16 year ,lp(solid)lw(vthin)) 
+(line gap17 year ,lp(solid)lw(vthin))
+(line gap18 year ,lp(solid)lw(vthin)) 
+(line gap40 year ,lp(solid)lw(vthin)) 
+(line gap21 year ,lp(solid)lw(vthin)) 
+(line gap22 year ,lp(solid)lw(vthin)) 
+(line gap23 year ,lp(solid)lw(vthin)) 
+(line gap24 year ,lp(solid)lw(vthin)) 
+(line gap25 year ,lp(solid)lw(vthin)) 
+(line gap26 year ,lp(solid)lw(vthin))
+(line gap27 year ,lp(solid)lw(vthin))
+(line gap28 year ,lp(solid)lw(vthin)) 
+(line gap29 year ,lp(solid)lw(vthin)) 
+(line gap30 year ,lp(solid)lw(vthin)) 
+(line gap31 year ,lp(solid)lw(vthin)) 
+(line gap32 year ,lp(solid)lw(vthin)) 
+(line gap33 year ,lp(solid)lw(vthin)) 
+(line gap34 year ,lp(solid)lw(vthin))
+(line gap35 year ,lp(solid)lw(vthin))
+(line gap36 year ,lp(solid)lw(vthin))
+(line gap37 year ,lp(solid)lw(vthin)) 
+(line gap38 year ,lp(solid)lw(vthin)) 
+(line gap39 year ,lp(solid)lw(vthin)) 
+(line gap20 year ,lp(solid)lw(thick)lcolor(black)), /*treatment unit, Kenya*/
+yline(0, lpattern(shortdash) lcolor(black)) xline(2013, lpattern(shortdash) lcolor(black))
+xtitle("",si(small)) xlabel(#10) ytitle("Gap in GDP per capita prediction error", size(small))
+	legend(off);
+
+#delimit cr
+
